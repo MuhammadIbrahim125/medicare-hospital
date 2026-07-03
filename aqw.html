@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ur" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Chatbot</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+  <style>
+    body { font-family: 'Segoe UI', system-ui, sans-serif; }
+    .chat-container { height: 75vh; }
+    .message { animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .bot-bubble { background: linear-gradient(135deg, #3b82f6, #1e40af); }
+    .listening { animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+  </style>
+</head>
+<body class="bg-gray-950 text-white">
+
+  <div class="max-w-3xl mx-auto mt-8 rounded-3xl overflow-hidden shadow-2xl border border-gray-800">
+    
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-blue-600 to-indigo-700 p-5 flex items-center gap-4">
+      <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-3xl">🤖</div>
+      <div>
+        <h1 class="text-2xl font-bold">AI Chatbot</h1>
+        <p class="text-blue-200 text-sm flex items-center gap-2">
+          <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span> 
+          Voice + Text • Online
+        </p>
+      </div>
+    </div>
+
+    <!-- Chat Area -->
+    <div id="chat" class="chat-container bg-gray-900 p-6 overflow-y-auto flex flex-col gap-4">
+      <!-- Messages appear here -->
+    </div>
+
+    <!-- Input Area -->
+    <div class="bg-gray-800 p-5 border-t border-gray-700">
+      <div class="flex gap-3 items-center">
+        <button 
+          id="voiceBtn"
+          onclick="toggleVoice()"
+          class="w-14 h-14 bg-red-500 hover:bg-red-600 rounded-3xl flex items-center justify-center transition transform active:scale-95">
+          <i class="fa-solid fa-microphone text-2xl"></i>
+        </button>
+
+        <input 
+          id="userInput"
+          type="text" 
+          placeholder="Type ya microphone button dabayein..." 
+          class="flex-1 bg-gray-700 text-white rounded-3xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+          onkeypress="if(event.key === 'Enter') sendMessage()">
+        
+        <button 
+          onclick="sendMessage()"
+          class="bg-blue-600 hover:bg-blue-700 w-14 h-14 rounded-3xl flex items-center justify-center transition transform active:scale-95">
+          <i class="fa-solid fa-paper-plane text-xl"></i>
+        </button>
+      </div>
+      <p id="status" class="text-xs text-gray-400 text-center mt-2"></p>
+    </div>
+  </div>
+
+  <script>
+    const chat = document.getElementById('chat');
+    const voiceBtn = document.getElementById('voiceBtn');
+    const status = document.getElementById('status');
+    let recognition = null;
+    let isListening = false;
+
+    function initVoice() {
+      if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        recognition.lang = 'ur-PK';
+        recognition.interimResults = false;
+
+        recognition.onresult = (event) => {
+          const transcript = event.results[0][0].transcript;
+          document.getElementById('userInput').value = transcript;
+          sendMessage();
+        };
+
+        recognition.onerror = () => {
+          status.textContent = "Voice error. Dobara try karein.";
+          stopListening();
+        };
+
+        recognition.onend = () => stopListening();
+      } else {
+        status.textContent = "Browser voice support nahi karta.";
+      }
+    }
+
+    function toggleVoice() {
+      if (!recognition) initVoice();
+      if (!recognition) return;
+
+      if (isListening) {
+        stopListening();
+      } else {
+        startListening();
+      }
+    }
+
+    function startListening() {
+      recognition.start();
+      isListening = true;
+      voiceBtn.classList.add('listening', 'bg-red-600');
+      voiceBtn.classList.remove('bg-red-500');
+      status.textContent = "🎙️ Sun raha hoon... Boliye";
+    }
+
+    function stopListening() {
+      if (recognition) recognition.stop();
+      isListening = false;
+      voiceBtn.classList.remove('listening', 'bg-red-600');
+      voiceBtn.classList.add('bg-red-500');
+      status.textContent = "";
+    }
+
+    function addMessage(text, isUser) {
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `flex ${isUser ? 'justify-end' : 'justify-start'} message`;
+
+      msgDiv.innerHTML = `
+        <div class="${isUser ? 
+          'bg-blue-600 text-white max-w-[75%] rounded-3xl rounded-tr-none px-5 py-3' : 
+          'bot-bubble text-white max-w-[75%] rounded-3xl rounded-tl-none px-5 py-3'}">
+          ${text}
+        </div>
+      `;
+      chat.appendChild(msgDiv);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function botResponse(userText) {
+      const responses = {
+        "hi": "Assalamualaikum! Kya haal hai?",
+        "hello": "Hello! Kaise help karun?",
+        "kaise ho": "Main toh hamesha zabardast hoon! 😎 Aap kese hain?",
+        "thank": "Aapka khair hai!",
+        "bye": "Allah Hafiz! Phir milte hain 🚀"
+      };
+
+      let reply = "Bohot acha! Aur kya poochna hai?";
+
+      for (let key in responses) {
+        if (userText.toLowerCase().includes(key)) {
+          reply = responses[key];
+          break;
+        }
+      }
+
+      setTimeout(() => addMessage(reply, false), 700);
+    }
+
+    function sendMessage() {
+      const input = document.getElementById('userInput');
+      const text = input.value.trim();
+      if (text === "") return;
+
+      addMessage(text, true);
+      input.value = "";
+      stopListening();
+
+      botResponse(text);
+    }
+
+    // Welcome Message
+    window.onload = () => {
+      addMessage("Salam! Main aapka AI assistant hoon. Text ya voice se baat karein 🎤", false);
+      initVoice();
+    };
+  </script>
+
+</body>
+</html>
